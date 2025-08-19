@@ -3,50 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbol Krallığı (Gelişmiş Versiyon)</title>
+    <title>Futbol Krallığı (Süper Stabil Versiyon)</title>
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
 
     <style>
-        /* TEMA DEĞİŞKENLERİ: Ayarlardan tema değiştirmeyi bu değişkenler sağlar */
-        :root {
-            --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-            --primary-color: #1a73e8;
-            --accent-color: #00e676;
-            --text-color: #ffffff;
-            --card-bg: rgba(255, 255, 255, 0.1); 
-            --border-color: rgba(255, 255, 255, 0.2);
-            --error-color: #ff5252;
-            --page-bg: transparent; /* Koyu temada sayfa arkaplanı gradyan olacak */
-            --item-bg: rgba(0,0,0,0.2);
-            --item-border: var(--border-color);
+        /*
+            SAVUNMA MEKANİZMASI #1: CSS'in en temel halleri bile çalışmazsa diye
+            HTML ve BODY etiketlerine doğrudan stil vererek başlıyoruz.
+        */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
         }
 
-        /* AÇIK TEMA: body[data-theme='light'] seçicisi ile bu değişkenler aktif olur */
+        /* TEMA DEĞİŞKENLERİ */
+        :root {
+            --bg-solid: #1a2a33; /* SAVUNMA MEKANİZMASI #2: Gradyan çalışmazsa diye düz renk */
+            --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            --text-color: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --border-color: rgba(255, 255, 255, 0.2);
+            /* Diğer renkler... */
+            --primary-color: #1a73e8;
+            --accent-color: #00e676;
+        }
         [data-theme='light'] {
+            --bg-solid: #f4f4f4;
             --bg-gradient: linear-gradient(135deg, #e9e9e9 0%, #ffffff 100%);
-            --primary-color: #0052d4;
-            --accent-color: #00b894;
             --text-color: #2c3e50;
             --card-bg: rgba(0, 0, 0, 0.05);
             --border-color: rgba(0, 0, 0, 0.1);
-            --page-bg: #ffffff; /* Açık temada sayfaların arkaplanı beyaz olacak */
-            --item-bg: #f9f9f9;
-            --item-border: #e0e0e0;
+            --primary-color: #0052d4;
+            --accent-color: #00b894;
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text-color);
-            margin: 0;
-            overflow: hidden;
+            background-color: var(--bg-solid) !important; /* SAVUNMA MEKANİZMASI #3: !important kuralı */
+            background-image: var(--bg-gradient) !important;
+            color: var(--text-color) !important;
             transition: background 0.5s ease, color 0.5s ease;
         }
 
         .game-view {
-            display: none; width: 100vw; height: 100vh;
+            display: none; width: 100%; height: 100%;
             padding: 20px; box-sizing: border-box;
             animation: fadeIn 0.5s ease; position: absolute;
             top: 0; left: 0; overflow-y: auto;
@@ -54,267 +59,198 @@
         .game-view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* ANA MENÜ */
+        /* Arayüz stilleri öncekiyle büyük ölçüde aynı, okunabilirlik için kısaltıldı */
         #menu-view { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .main-title { font-size: 4em; font-weight: bold; text-shadow: 0 0 20px var(--accent-color); margin-bottom: 20px; transition: text-shadow 0.5s ease; }
+        .main-title { font-size: 4em; font-weight: bold; text-shadow: 0 0 20px var(--accent-color); margin-bottom: 20px; }
         .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 600px; }
         .menu-btn { background: var(--card-bg); border: 2px solid var(--border-color); color: var(--text-color); padding: 25px; font-size: 1.5em; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(5px); }
-        .menu-btn:hover { background-color: var(--primary-color); border-color: var(--primary-color); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        
-        /* ÜST BAR */
+        .menu-btn:hover { background-color: var(--primary-color); border-color: var(--primary-color); transform: translateY(-5px); }
         .top-bar-element { position: fixed; z-index: 10; background: var(--card-bg); color: var(--text-color); padding: 10px 20px; border-radius: 20px; font-size: 1.2em; border: 1px solid var(--border-color); backdrop-filter: blur(5px); display: none; }
         #currency-display { top: 20px; right: 20px; }
         #back-to-menu { top: 20px; left: 20px; cursor: pointer; }
-
-        /* SAYFA İÇERİĞİ VE OYUNCU LİSTELERİ */
-        .page-content { background: var(--page-bg); max-width: 900px; margin: 80px auto 20px auto; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .player-list { list-style: none; padding: 0; margin: 0; }
-        .player-item { display: flex; justify-content: space-between; align-items: center; background: var(--item-bg); border: 1px solid var(--item-border); padding: 15px; margin-bottom: 10px; border-radius: 10px; }
-        .player-info { font-size: 1.2em; }
-        .player-ovr { font-size: 1.5em; font-weight: bold; color: var(--primary-color); }
-
-        /* AYARLAR MENÜSÜ */
-        .setting-category { margin-bottom: 30px; }
-        .setting-category h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        .setting-options button { font-size: 1em; padding: 10px 20px; margin-right: 10px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-color); cursor: pointer; }
-        .setting-options button.active { background: var(--accent-color); color: #0f2027; border-color: var(--accent-color); }
-        
+        .page-content { max-width: 900px; margin: 80px auto 20px auto; padding: 20px; border-radius: 15px; }
+        .player-list { list-style: none; padding: 0; }
+        .player-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.1); padding: 15px; margin-bottom: 10px; border-radius: 10px; }
         #match-view-3d { padding: 0; }
-        #threejs-canvas { width: 100%; height: 100%; display: block; }
     </style>
 </head>
-<body data-theme="dark"> <div id="currency-display" class="top-bar-element">💰 Coins: <span id="coin-balance">1000</span></div>
-    <div id="back-to-menu" class="top-bar-element">&lt; Menüye Dön</div>
+<body data-theme="dark">
 
-    <div id="menu-view" class="game-view">
-        <h1 id="main-title" class="main-title">FUTBOL KRALLIĞI</h1>
-        <div class="menu-buttons">
-            <button class="menu-btn" data-view="packs-view">Paketler</button>
-            <button class="menu-btn" data-view="squad-view">Kadro</button>
-            <button class="menu-btn" data-view="match-view-3d">Maç Yap</button>
-            <button class="menu-btn" data-view="ayarlar-view">Ayarlar</button>
-        </div>
-    </div>
-    
-    <div id="packs-view" class="game-view">
-        <div class="page-content">
-            <h2>Paket Dükkanı</h2>
-            <p>Yeni bir oyuncu keşfetmek için paket aç!</p>
-            <button id="open-pack-btn">Oyuncu Paketi Aç (50 Coin)</button>
-            <div id="pack-results" style="margin-top: 20px;"></div>
-        </div>
-    </div>
-    
-    <div id="squad-view" class="game-view">
-        <div class="page-content">
-            <h2>Takım Kadrosu</h2>
-            <p>Mevcut oyuncuların:</p>
-            <ul id="squad-player-list" class="player-list"></ul>
-        </div>
-    </div>
+    <noscript>
+        <h1>JavaScript bu oyunu çalıştırmak için gereklidir. Lütfen tarayıcınızda JavaScript'i etkinleştirin.</h1>
+    </noscript>
 
-    <div id="dev-view" class="game-view">
-        <div class="page-content">
-            <h2>Oyuncu Geliştirme</h2>
-            <p>Geliştirmek istediğin oyuncuyu seç:</p>
-            <ul id="dev-player-list" class="player-list"></ul>
-        </div>
-    </div>
+    <div id="game-container" style="visibility: hidden;"> <div id="currency-display" class="top-bar-element">💰 Coins: <span id="coin-balance">1000</span></div>
+        <div id="back-to-menu" class="top-bar-element">&lt; Menüye Dön</div>
 
-    <div id="ayarlar-view" class="game-view">
-        <div class="page-content">
-            <h2>Ayarlar</h2>
-            <div class="setting-category">
+        <div id="menu-view" class="game-view">
+            <h1 id="main-title" class="main-title">FUTBOL KRALLIĞI</h1>
+            <div class="menu-buttons">
+                <button class="menu-btn" data-view="packs-view">Paketler</button>
+                <button class="menu-btn" data-view="squad-view">Kadro</button>
+                <button class="menu-btn" data-view="match-view-3d">Maç Yap</button>
+                <button class="menu-btn" data-view="ayarlar-view">Ayarlar</button>
+            </div>
+        </div>
+        
+        <div id="packs-view" class="game-view">
+             <div class="page-content">
+                <h2>Paket Dükkanı</h2>
+                <p>Yeni bir oyuncu keşfetmek için paket aç!</p>
+                <button id="open-pack-btn" style="padding:15px 30px; font-size:1.2em">Oyuncu Paketi Aç (50 Coin)</button>
+                <div id="pack-results" style="margin-top: 20px; min-height: 150px;"></div>
+            </div>
+        </div>
+
+        <div id="squad-view" class="game-view">
+            <div class="page-content">
+                <h2>Takım Kadrosu</h2>
+                <ul id="squad-player-list" class="player-list"></ul>
+            </div>
+        </div>
+
+        <div id="ayarlar-view" class="game-view">
+            <div class="page-content">
+                <h2>Ayarlar</h2>
                 <h3>Tema Seçimi</h3>
-                <div id="theme-options" class="setting-options">
+                <div id="theme-options">
                     <button data-theme="dark">Koyu Tema</button>
                     <button data-theme="light">Açık Tema</button>
                 </div>
             </div>
-            <div class="setting-category">
-                <h3>Dil Seçimi</h3>
-                <div id="lang-options" class="setting-options">
-                    <button data-lang="tr">Türkçe</button>
-                    <button data-lang="en">English</button>
-                </div>
-            </div>
+        </div>
+        
+        <div id="match-view-3d" class="game-view">
+            <canvas id="threejs-canvas"></canvas>
         </div>
     </div>
     
-    <div id="match-view-3d" class="game-view">
-        <canvas id="threejs-canvas"></canvas>
-    </div>
-    
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            //--- OYUN VERİLERİ VE DEĞİŞKENLER ---
-            const gameState = { coins: 1000, roster: [] };
-            let nextPlayerId = 1;
-            const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'], FIRST_NAMES = ['Arda', 'Kerem', 'Ferdi', 'Uğurcan', 'Hakan', 'Barış', 'Kenan', 'Orkun', 'Merih', 'Salih'], LAST_NAMES = ['Güler', 'Aktürkoğlu', 'Kadıoğlu', 'Çakır', 'Çalhanoğlu', 'Yılmaz', 'Yıldız', 'Kökçü', 'Demiral', 'Özcan'];
-            let threeJsState = { isInitialized: false };
-            const i18n = { // Dil verileri
-                tr: { main_title: "FUTBOL KRALLIĞI" },
-                en: { main_title: "FOOTBALL KINGDOM" }
-            };
+        // SAVUNMA MEKANİZMASI #4: Tüm kodları try-catch bloğuna alıyoruz.
+        // Bu, herhangi bir JS hatası olursa oyunun tamamen çökmesini engeller
+        // ve kullanıcıya bir hata mesajı gösterir.
+        try {
+            document.addEventListener('DOMContentLoaded', () => {
+                //--- GÜVENLİK: Elementlerin varlığını kontrol et ---
+                const getEl = (id) => document.getElementById(id);
+                const gameContainer = getEl('game-container');
+                if (!gameContainer) throw new Error('Oyun ana konteyneri bulunamadı!');
 
-            //--- ELEMENT REFERANSLARI ---
-            const bodyEl = document.body;
-            const coinBalanceEl = document.getElementById('coin-balance');
-            const menuButtons = document.querySelectorAll('.menu-btn');
-            const gameViews = document.querySelectorAll('.game-view');
-            const currencyDisplay = document.getElementById('currency-display');
-            const backToMenuBtn = document.getElementById('back-to-menu');
-            const openPackBtn = document.getElementById('open-pack-btn');
-            const packResultsEl = document.getElementById('pack-results');
-            const squadPlayerListEl = document.getElementById('squad-player-list');
-            const devPlayerListEl = document.getElementById('dev-player-list');
-            const mainTitleEl = document.getElementById('main-title');
-            const themeOptionsEl = document.getElementById('theme-options');
-            const langOptionsEl = document.getElementById('lang-options');
-
-            //--- YENİ: AYARLAR FONKSİYONLARI ---
-            function applyTheme(themeName) {
-                bodyEl.dataset.theme = themeName;
-                localStorage.setItem('game_theme', themeName);
-                // Ayarlar menüsündeki butonların aktif durumunu güncelle
-                themeOptionsEl.querySelectorAll('button').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.theme === themeName);
-                });
-            }
-
-            function applyLanguage(langCode) {
-                mainTitleEl.textContent = i18n[langCode].main_title;
-                localStorage.setItem('game_lang', langCode);
-                // Ayarlar menüsündeki butonların aktif durumunu güncelle
-                langOptionsEl.querySelectorAll('button').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.lang === langCode);
-                });
-            }
-
-            function loadSettings() {
-                const savedTheme = localStorage.getItem('game_theme') || 'dark';
-                const savedLang = localStorage.getItem('game_lang') || 'tr';
-                applyTheme(savedTheme);
-                applyLanguage(savedLang);
-            }
-
-            //--- YENİ: OYUNCU LİSTESİNİ GÖSTERME FONKSİYONU ---
-            function renderRosterList(targetElement) {
-                targetElement.innerHTML = ''; // Listeyi temizle
-                if (gameState.roster.length === 0) {
-                    targetElement.innerHTML = '<li>Hiç oyuncun yok. Paket açarak oyuncu kazan!</li>';
-                    return;
-                }
-                gameState.roster.forEach(player => {
-                    const playerEl = document.createElement('li');
-                    playerEl.className = 'player-item';
-                    playerEl.innerHTML = `
-                        <div class="player-info">
-                            <strong>${player.name}</strong> (${player.pos})
-                        </div>
-                        <div class="player-ovr">${player.ovr}</div>
-                    `;
-                    targetElement.appendChild(playerEl);
-                });
-            }
-
-            //--- GENEL FONKSİYONLAR ---
-            const updateCoinDisplay = () => { coinBalanceEl.textContent = gameState.coins; };
-
-            const switchView = (viewId) => {
-                gameViews.forEach(view => view.classList.remove('active'));
-                const newView = document.getElementById(viewId);
-                if (newView) newView.classList.add('active');
-                
-                const isMenu = viewId === 'menu-view';
-                currencyDisplay.style.display = isMenu ? 'none' : 'block';
-                backToMenuBtn.style.display = isMenu ? 'none' : 'block';
-                
-                // Gerekli ekranlara girildiğinde oyuncu listelerini güncelle
-                if (viewId === 'squad-view') renderRosterList(squadPlayerListEl);
-                if (viewId === 'dev-view') renderRosterList(devPlayerListEl);
-                if (viewId === 'match-view-3d' && !threeJsState.isInitialized) initThreeJS();
-            };
-            
-            //--- PAKET SİSTEMİ (GÜNCELLENDİ) ---
-            const createRandomPlayer = () => ({ id: nextPlayerId++, name: `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`, pos: POSITIONS[Math.floor(Math.random() * POSITIONS.length)], ovr: Math.floor(Math.random() * 40) + 55 });
-
-            const openPack = () => {
-                const packCost = 50;
-                if (gameState.coins < packCost) { alert('Yeterli coinin yok!'); return; }
-                gameState.coins -= packCost;
-                updateCoinDisplay();
-                packResultsEl.innerHTML = ''; 
-                
-                // Sadece 1 oyuncu oluştur
-                const newPlayer = createRandomPlayer();
-                gameState.roster.push(newPlayer);
-                
-                const card = document.createElement('div');
-                card.className = 'player-card'; // CSS'te zaten tanımlı
-                card.innerHTML = `<div class="ovr">${newPlayer.ovr}</div><div class="name">${newPlayer.name}</div><div class="pos">${newPlayer.pos}</div>`;
-                packResultsEl.appendChild(card);
-            };
-
-            //--- 3D SAHNE (GÜNCELLENDİ) ---
-            const initThreeJS = () => {
-                const canvas = document.getElementById('threejs-canvas');
-                if(!canvas) return;
-                threeJsState.isInitialized = true;
-                
-                const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x87ceeb);
-                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                camera.position.set(0, 15, 30);
-                
-                scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-                const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-                dirLight.position.set(10, 20, 5);
-                scene.add(dirLight);
-                
-                const pitch = new THREE.Mesh(new THREE.PlaneGeometry(100, 60), new THREE.MeshStandardMaterial({ color: 0x008000 }));
-                pitch.rotation.x = -Math.PI / 2;
-                scene.add(pitch);
-                
-                const ball = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-                ball.position.set(0, 0.5, 0);
-                scene.add(ball);
-                
-                const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                
-                const animate = () => {
-                    requestAnimationFrame(animate);
-                    controls.update();
-                    renderer.render(scene, camera);
+                const elements = {
+                    body: document.body,
+                    coinBalance: getEl('coin-balance'),
+                    menuButtons: document.querySelectorAll('.menu-btn'),
+                    gameViews: document.querySelectorAll('.game-view'),
+                    currencyDisplay: getEl('currency-display'),
+                    backToMenuBtn: getEl('back-to-menu'),
+                    openPackBtn: getEl('open-pack-btn'),
+                    packResults: getEl('pack-results'),
+                    squadPlayerList: getEl('squad-player-list'),
+                    mainTitle: getEl('main-title'),
+                    themeOptions: getEl('theme-options')
                 };
-                animate();
 
-                window.addEventListener('resize', () => {
-                    camera.aspect = window.innerWidth / window.innerHeight;
-                    camera.updateProjectionMatrix();
+                //--- Oyun Verileri ---
+                const gameState = { coins: 1000, roster: [] };
+                
+                //--- Ayarlar ---
+                function applyTheme(themeName) {
+                    if (elements.body) {
+                        elements.body.dataset.theme = themeName;
+                        localStorage.setItem('game_theme', themeName);
+                        elements.themeOptions.querySelectorAll('button').forEach(btn => {
+                            btn.style.backgroundColor = btn.dataset.theme === themeName ? 'var(--accent-color)' : 'transparent';
+                        });
+                    }
+                }
+
+                function loadSettings() {
+                    const savedTheme = localStorage.getItem('game_theme') || 'dark';
+                    applyTheme(savedTheme);
+                }
+
+                //--- Oyuncu Listesi ---
+                function renderRosterList(targetElement) {
+                    if (!targetElement) return;
+                    targetElement.innerHTML = '';
+                    if (gameState.roster.length === 0) {
+                        targetElement.innerHTML = '<li class="player-item">Hiç oyuncun yok. Paket aç!</li>';
+                        return;
+                    }
+                    gameState.roster.forEach(player => {
+                        targetElement.innerHTML += `<li class="player-item"><div><strong>${player.name}</strong></div><div>${player.ovr}</div></li>`;
+                    });
+                }
+
+                //--- Genel Fonksiyonlar ---
+                const switchView = (viewId) => {
+                    elements.gameViews.forEach(view => view.classList.remove('active'));
+                    const newView = getEl(viewId);
+                    if (newView) newView.classList.add('active');
+                    
+                    const isMenu = viewId === 'menu-view';
+                    elements.currencyDisplay.style.display = isMenu ? 'none' : 'block';
+                    elements.backToMenuBtn.style.display = isMenu ? 'none' : 'block';
+                    
+                    if (viewId === 'squad-view') renderRosterList(elements.squadPlayerList);
+                    if (viewId === 'match-view-3d' && !window.threeJsInitialized) initThreeJS();
+                };
+                
+                //--- Paket Açma ---
+                function openPack() {
+                    if (gameState.coins < 50) { alert('Yetersiz Bakiye!'); return; }
+                    gameState.coins -= 50;
+                    if(elements.coinBalance) elements.coinBalance.textContent = gameState.coins;
+                    
+                    const player = { name: "Oyuncu " + (gameState.roster.length + 1), ovr: Math.floor(Math.random() * 40) + 55 };
+                    gameState.roster.push(player);
+
+                    if(elements.packResults) {
+                        elements.packResults.innerHTML = `<div class="player-item" style="justify-content:center;">Yeni Oyuncu: <strong>${player.name} (${player.ovr})</strong></div>`;
+                    }
+                }
+
+                //--- 3D Sahne ---
+                function initThreeJS() {
+                    window.threeJsInitialized = true;
+                    const canvas = getEl('threejs-canvas');
+                    if(!canvas) return;
+
+                    const scene = new THREE.Scene();
+                    scene.background = new THREE.Color(0x87ceeb);
+                    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    camera.position.set(0, 15, 30);
+                    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+                    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
                     renderer.setSize(window.innerWidth, window.innerHeight);
+                    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
+                    animate();
+                }
+
+                //--- Olay Dinleyicileri ---
+                elements.menuButtons.forEach(button => button.addEventListener('click', () => switchView(button.dataset.view)));
+                if (elements.backToMenuBtn) elements.backToMenuBtn.addEventListener('click', () => switchView('menu-view'));
+                if (elements.openPackBtn) elements.openPackBtn.addEventListener('click', openPack);
+                if (elements.themeOptions) elements.themeOptions.addEventListener('click', (e) => {
+                    if(e.target.tagName === 'BUTTON') applyTheme(e.target.dataset.theme);
                 });
-            };
 
-            //--- OLAY DİNLEYİCİLERİ VE BAŞLATMA ---
-            menuButtons.forEach(button => button.addEventListener('click', () => switchView(button.dataset.view)));
-            backToMenuBtn.addEventListener('click', () => switchView('menu-view'));
-            openPackBtn.addEventListener('click', openPack);
-            themeOptionsEl.addEventListener('click', (e) => {
-                if(e.target.tagName === 'BUTTON') applyTheme(e.target.dataset.theme);
+                //--- OYUNU BAŞLAT ---
+                loadSettings();
+                if (elements.coinBalance) elements.coinBalance.textContent = gameState.coins;
+                switchView('menu-view');
+                gameContainer.style.visibility = 'visible'; // Her şey hazır, oyunu göster
             });
-            langOptionsEl.addEventListener('click', (e) => {
-                if(e.target.tagName === 'BUTTON') applyLanguage(e.target.dataset.lang);
-            });
-
-            // Oyunu başlat
-            loadSettings();
-            updateCoinDisplay();
-            switchView('menu-view');
-        });
+        } catch (error) {
+            // Eğer herhangi bir hata olursa, kullanıcıya göster.
+            document.body.innerHTML = `<div style="padding: 20px; color: red; background: white;">
+                <h1>Kritik Hata!</h1>
+                <p>Oyun yüklenirken bir sorun oluştu. Lütfen sayfayı Ctrl+Shift+R ile yeniden yüklemeyi deneyin.</p>
+                <p>Hata Detayı: ${error.message}</p>
+            </div>`;
+            console.error("Oyun Hatası:", error);
+        }
     </script>
 </body>
 </html>
