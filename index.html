@@ -3,17 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Futbol Menajerlik</title>
+    <title>3D Futbol Menajerlik (Çalışan Versiyon)</title>
     
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
-            }
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.157.0/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 
     <style>
         :root {
@@ -30,16 +23,20 @@
             background: var(--bg-gradient);
             color: var(--text-color);
             margin: 0;
-            overflow: hidden; /* 3D sahne için kaydırmayı engelle */
+            overflow: hidden;
         }
 
         .game-view {
-            display: none; /* Başlangıçta tüm görünümler gizli */
+            display: none;
             width: 100vw;
             height: 100vh;
             padding: 20px;
             box-sizing: border-box;
             animation: fadeIn 0.5s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
         }
 
         .game-view.active {
@@ -51,7 +48,6 @@
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* --- MENÜ EKRANI --- */
         #menu-view {
             display: flex;
             flex-direction: column;
@@ -94,31 +90,21 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
         
-        .currency-display {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+        .top-bar-element {
+            position: fixed;
+            z-index: 10;
             background: var(--card-bg);
             padding: 10px 20px;
             border-radius: 20px;
             font-size: 1.2em;
             border: 1px solid var(--border-color);
+            display: none; /* JS ile görünür yapılacak */
         }
         
-        .back-to-menu {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: var(--card-bg);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1.2em;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-        }
+        #currency-display { top: 20px; right: 20px; }
+        #back-to-menu { top: 20px; left: 20px; cursor: pointer; }
 
-        /* --- PAKET EKRANI --- */
-        #packs-view { text-align: center; }
+        #packs-view { text-align: center; padding-top: 80px; }
         
         #open-pack-btn {
             padding: 20px 40px;
@@ -161,18 +147,16 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- 3D MAÇ EKRANI --- */
         #match-view-3d { padding: 0; }
         #threejs-canvas { width: 100%; height: 100%; display: block; }
-
     </style>
 </head>
 <body>
 
-    <div id="currency-display" class="currency-display" style="display: none;">
+    <div id="currency-display" class="top-bar-element">
         💰 Coins: <span id="coin-balance">1000</span>
     </div>
-    <div id="back-to-menu" class="back-to-menu" style="display: none;">
+    <div id="back-to-menu" class="top-bar-element">
         &lt; Menüye Dön
     </div>
 
@@ -208,188 +192,180 @@
     </div>
     
 
-    <script type="module">
-        // Three.js kütüphanesini ve eklentilerini import et
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    <script>
+        // Sayfanın tamamen yüklendiğinden emin olmak için kodları bu bloğa alıyoruz.
+        document.addEventListener('DOMContentLoaded', () => {
 
-        // --- OYUN DEĞİŞKENLERİ ---
-        const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
-        const FIRST_NAMES = ['Arda', 'Kerem', 'Ferdi', 'Uğurcan', 'Hakan', 'Barış', 'Kenan', 'Orkun', 'Merih', 'Salih'];
-        const LAST_NAMES = ['Güler', 'Aktürkoğlu', 'Kadıoğlu', 'Çakır', 'Çalhanoğlu', 'Yılmaz', 'Yıldız', 'Kökçü', 'Demiral', 'Özcan'];
-        let nextPlayerId = 1;
-        
-        let gameState = {
-            coins: 1000,
-            roster: [], // Başlangıçta boş
-        };
-        
-        // --- ELEMENT REFERANSLARI ---
-        const coinBalanceEl = document.getElementById('coin-balance');
-        const menuButtons = document.querySelectorAll('.menu-btn');
-        const gameViews = document.querySelectorAll('.game-view');
-        const currencyDisplay = document.getElementById('currency-display');
-        const backToMenuBtn = document.getElementById('back-to-menu');
-        
-        const openPackBtn = document.getElementById('open-pack-btn');
-        const packResultsEl = document.getElementById('pack-results');
-
-
-        // --- GENEL FONKSİYONLAR ---
-        
-        function updateCoinDisplay() {
-            coinBalanceEl.textContent = gameState.coins;
-        }
-
-        // Farklı oyun ekranları arasında geçiş yapar
-        function switchView(viewId) {
-            gameViews.forEach(view => view.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
+            // --- OYUN DEĞİŞKENLERİ ---
+            const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
+            const FIRST_NAMES = ['Arda', 'Kerem', 'Ferdi', 'Uğurcan', 'Hakan', 'Barış', 'Kenan', 'Orkun', 'Merih', 'Salih'];
+            const LAST_NAMES = ['Güler', 'Aktürkoğlu', 'Kadıoğlu', 'Çakır', 'Çalhanoğlu', 'Yılmaz', 'Yıldız', 'Kökçü', 'Demiral', 'Özcan'];
+            let nextPlayerId = 1;
             
-            if (viewId === 'menu-view') {
-                currencyDisplay.style.display = 'none';
-                backToMenuBtn.style.display = 'none';
-            } else {
-                currencyDisplay.style.display = 'block';
-                backToMenuBtn.style.display = 'block';
-            }
-            
-            // Eğer 3D maç ekranına geçiyorsak, sahneyi başlat
-            if(viewId === 'match-view-3d') {
-                initThreeJS();
-            }
-        }
-        
-        // --- OYUNCU OLUŞTURMA VE PAKET MEKANİĞİ ---
-        function createRandomPlayer() {
-            const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-            const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-            const player = {
-                id: nextPlayerId++,
-                name: `${firstName} ${lastName}`,
-                pos: POSITIONS[Math.floor(Math.random() * POSITIONS.length)],
-                ovr: Math.floor(Math.random() * 40) + 55 // 55-94 arası güç
+            let gameState = {
+                coins: 1000,
+                roster: [], // Başlangıçta boş
             };
-            return player;
-        }
-        
-        function openPack() {
-            const packCost = 150;
-            if (gameState.coins < packCost) {
-                alert('Yeterli coinin yok!');
-                return;
+            
+            // --- ELEMENT REFERANSLARI ---
+            const coinBalanceEl = document.getElementById('coin-balance');
+            const menuButtons = document.querySelectorAll('.menu-btn');
+            const gameViews = document.querySelectorAll('.game-view');
+            const currencyDisplay = document.getElementById('currency-display');
+            const backToMenuBtn = document.getElementById('back-to-menu');
+            
+            const openPackBtn = document.getElementById('open-pack-btn');
+            const packResultsEl = document.getElementById('pack-results');
+
+
+            // --- GENEL FONKSİYONLAR ---
+            
+            function updateCoinDisplay() {
+                coinBalanceEl.textContent = gameState.coins;
+            }
+
+            function switchView(viewId) {
+                gameViews.forEach(view => view.classList.remove('active'));
+                const newView = document.getElementById(viewId);
+                if (newView) {
+                    newView.classList.add('active');
+                }
+                
+                if (viewId === 'menu-view') {
+                    currencyDisplay.style.display = 'none';
+                    backToMenuBtn.style.display = 'none';
+                } else {
+                    currencyDisplay.style.display = 'block';
+                    backToMenuBtn.style.display = 'block';
+                }
+                
+                if(viewId === 'match-view-3d') {
+                    // 3D sahne zaten başlatıldıysa tekrar başlatma
+                    if(!threeJsState.isInitialized) {
+                       initThreeJS();
+                    }
+                }
             }
             
-            gameState.coins -= packCost;
+            // --- OYUNCU OLUŞTURMA VE PAKET MEKANİĞİ ---
+            function createRandomPlayer() {
+                const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+                const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+                return {
+                    id: nextPlayerId++,
+                    name: `${firstName} ${lastName}`,
+                    pos: POSITIONS[Math.floor(Math.random() * POSITIONS.length)],
+                    ovr: Math.floor(Math.random() * 40) + 55 // 55-94 arası güç
+                };
+            }
+            
+            function openPack() {
+                const packCost = 150;
+                if (gameState.coins < packCost) {
+                    alert('Yeterli coinin yok!');
+                    return;
+                }
+                
+                gameState.coins -= packCost;
+                updateCoinDisplay();
+                
+                packResultsEl.innerHTML = ''; 
+                const newPlayers = [];
+                for (let i = 0; i < 5; i++) {
+                    const newPlayer = createRandomPlayer();
+                    newPlayers.push(newPlayer);
+                    gameState.roster.push(newPlayer);
+                }
+                
+                newPlayers.forEach((player, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    card.style.animationDelay = `${index * 100}ms`;
+                    card.innerHTML = `
+                        <div class="ovr">${player.ovr}</div>
+                        <div class="name">${player.name}</div>
+                        <div class="pos">${player.pos}</div>
+                    `;
+                    packResultsEl.appendChild(card);
+                });
+                console.log("Güncel Kadro:", gameState.roster);
+            }
+            
+            // --- THREE.JS 3D SAHNE FONKSİYONLARI ---
+            let threeJsState = {
+                scene: null, camera: null, renderer: null, controls: null, isInitialized: false
+            };
+            
+            function initThreeJS() {
+                const canvas = document.getElementById('threejs-canvas');
+                if(!canvas) return;
+
+                threeJsState.isInitialized = true;
+                
+                threeJsState.scene = new THREE.Scene();
+                threeJsState.scene.background = new THREE.Color(0x87ceeb);
+
+                threeJsState.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                threeJsState.camera.position.set(0, 15, 30);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                threeJsState.scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 20, 5);
+                threeJsState.scene.add(directionalLight);
+
+                const pitchGeometry = new THREE.PlaneGeometry(100, 60);
+                const pitchMaterial = new THREE.MeshStandardMaterial({ color: 0x008000 });
+                const pitch = new THREE.Mesh(pitchGeometry, pitchMaterial);
+                pitch.rotation.x = -Math.PI / 2;
+                threeJsState.scene.add(pitch);
+
+                const ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const ballMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+                ball.position.set(0, 0.5, 0);
+                threeJsState.scene.add(ball);
+
+                threeJsState.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                threeJsState.renderer.setSize(window.innerWidth, window.innerHeight);
+
+                threeJsState.controls = new THREE.OrbitControls(threeJsState.camera, threeJsState.renderer.domElement);
+                threeJsState.controls.enableDamping = true;
+
+                animate();
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                threeJsState.controls.update();
+                threeJsState.renderer.render(threeJsState.scene, threeJsState.camera);
+            }
+
+            window.addEventListener('resize', () => {
+                if (threeJsState.isInitialized) {
+                    threeJsState.camera.aspect = window.innerWidth / window.innerHeight;
+                    threeJsState.camera.updateProjectionMatrix();
+                    threeJsState.renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
+
+            // --- OLAY DİNLEYİCİLERİ ---
+            
+            menuButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const viewId = button.getAttribute('data-view');
+                    switchView(viewId);
+                });
+            });
+            
+            backToMenuBtn.addEventListener('click', () => switchView('menu-view'));
+            
+            openPackBtn.addEventListener('click', openPack);
+            
+            // --- OYUNU BAŞLAT ---
             updateCoinDisplay();
-            
-            packResultsEl.innerHTML = ''; // Önceki sonuçları temizle
-            const newPlayers = [];
-            for (let i = 0; i < 5; i++) {
-                const newPlayer = createRandomPlayer();
-                newPlayers.push(newPlayer);
-                gameState.roster.push(newPlayer);
-            }
-            
-            // Oyuncuları kart olarak ekranda göster
-            newPlayers.forEach((player, index) => {
-                const card = document.createElement('div');
-                card.className = 'player-card';
-                card.style.animationDelay = `${index * 100}ms`;
-                card.innerHTML = `
-                    <div class="ovr">${player.ovr}</div>
-                    <div class="name">${player.name}</div>
-                    <div class="pos">${player.pos}</div>
-                `;
-                packResultsEl.appendChild(card);
-            });
-
-            console.log("Güncel Kadro:", gameState.roster);
-        }
-        
-        // --- THREE.JS 3D SAHNE FONKSİYONLARI ---
-        let scene, camera, renderer, controls;
-        
-        function initThreeJS() {
-            const canvas = document.getElementById('threejs-canvas');
-            
-            // 1. Sahne (Scene)
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb); // Gökyüzü rengi
-
-            // 2. Kamera (Camera)
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 15, 30); // Kameranın pozisyonu
-
-            // 3. Işık (Light)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(10, 20, 5);
-            scene.add(directionalLight);
-
-            // 4. Nesneler (Objects)
-            // Saha (Plane)
-            const pitchGeometry = new THREE.PlaneGeometry(100, 60);
-            const pitchMaterial = new THREE.MeshStandardMaterial({ color: 0x008000 }); // Yeşil
-            const pitch = new THREE.Mesh(pitchGeometry, pitchMaterial);
-            pitch.rotation.x = -Math.PI / 2; // Yere yatır
-            scene.add(pitch);
-
-            // Top (Sphere)
-            const ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-            const ballMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // Beyaz
-            const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-            ball.position.set(0, 0.5, 0); // Sahanın ortasına ve biraz yukarısına koy
-            scene.add(ball);
-
-            // 5. İşleyici (Renderer)
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            // 6. Kontroller (OrbitControls)
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-
-            // Animasyon Döngüsü
-            animate();
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update(); // Kamera kontrollerini güncelle
-            renderer.render(scene, camera);
-        }
-
-        // Pencere yeniden boyutlandırıldığında
-        window.addEventListener('resize', () => {
-            if (renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
+            switchView('menu-view'); // Oyunu menü ekranında başlat
         });
-
-
-        // --- OLAY DİNLEYİCİLERİ ---
-        
-        // Menü butonları
-        menuButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const viewId = button.getAttribute('data-view');
-                switchView(viewId);
-            });
-        });
-        
-        // Menüye Dön butonu
-        backToMenuBtn.addEventListener('click', () => switchView('menu-view'));
-        
-        // Paket açma butonu
-        openPackBtn.addEventListener('click', openPack);
-        
-        // --- OYUNU BAŞLAT ---
-        updateCoinDisplay(); // Başlangıç coin'ini göster
-        
     </script>
 </body>
 </html>
