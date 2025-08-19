@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futbol Menajerlik Oyunu</title>
+    
+    <style>
+        :root {
+            --primary-color: #0d2c4b;
+            --secondary-color: #2c5d8f;
+            --accent-color: #4caf50;
+            --text-color: #ffffff;
+            --background-color: #f0f2f5;
+            --card-background: #ffffff;
+            --card-text: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--card-text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        
+        #management-panel { grid-column: 1 / 2; }
+        #squad-panel { grid-column: 2 / 3; grid-row: 1 / 3; }
+        #roster-panel { grid-column: 1 / 3; }
+
+        .currency-info {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        
+        #roster-capacity {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1em;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #26517a;
+        }
+        
+        .player-list {
+            list-style: none;
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .player-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .player-item.selected {
+             background-color: #e0f0e0;
+             font-weight: bold;
+        }
+
+        .player-name { font-weight: bold; }
+        .player-pos { color: #888; margin: 0 10px; }
+        .player-ovr { font-size: 1.1em; color: var(--primary-color); }
+
+        .squad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .squad-category {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        #match-result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            text-align: center;
+            font-size: 1.5em;
+            border-radius: 8px;
+            display: none; /* Başlangıçta gizli */
+        }
+    </style>
+    </head>
+<body>
+
+<div class="game-container">
+    
+    <div id="management-panel" class="panel">
+        <h1>Yönetim</h1>
+        <div id="currency-info" class="currency-info">
+            💰 Coins: <span id="coin-balance">0</span>
+        </div>
+        <div id="roster-capacity" class="currency-info">
+            📦 Kadro Kapasitesi: <span id="roster-size">500</span>
+        </div>
+        <button id="increase-roster-btn" class="btn">Kapasite Arttır (100 Coin)</button>
+        <hr style="margin: 20px 0;">
+        <h2>Maç Merkezi</h2>
+        <button id="play-match-btn" class="btn btn-secondary">Bot'a Karşı Maç Yap</button>
+        <div id="match-result"></div>
+    </div>
+    
+    <div id="squad-panel" class="panel">
+        <h2>Takım Kadrosu</h2>
+        <div class="squad-grid">
+            <div class="squad-category">
+                <h3>İlk 11</h3>
+                <ul id="starting-eleven" class="player-list"></ul>
+            </div>
+            <div class="squad-category">
+                <h3>Yedekler</h3>
+                <ul id="substitutes" class="player-list"></ul>
+            </div>
+            <div class="squad-category">
+                <h3>Dış Kadro</h3>
+                <ul id="reserves" class="player-list"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <div id="roster-panel" class="panel">
+        <h2>Tüm Oyuncular (<span id="player-count">0</span> / <span id="max-roster-size">500</span>)</h2>
+        <p>Bir oyuncu seçerek kadroya ekleyin/kadrodan çıkarın.</p>
+        <ul id="full-roster" class="player-list"></ul>
+    </div>
+    
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- OYUN VERİLERİ VE DEĞİŞKENLER ---
+    const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
+    const FIRST_NAMES = ['Ahmet', 'Burak', 'Can', 'Deniz', 'Emre', 'Fatih', 'Gökhan', 'Hakan', 'İsmail', 'Kerem'];
+    const LAST_NAMES = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Arslan', 'Doğan', 'Öztürk', 'Kurt', 'Polat', 'Şahin'];
+
+    let gameState = {
+        coins: 1000,
+        roster: [],
+        maxRosterSize: 500,
+        squad: {
+            starting: [], // Oyuncu ID'leri
+            subs: [],     // Oyuncu ID'leri
+            reserves: []  // Oyuncu ID'leri
+        }
+    };
+    
+    let selectedPlayerId = null;
+
+    // --- ELEMENT REFERANSLARI ---
+    const coinBalanceEl = document.getElementById('coin-balance');
+    const rosterSizeEl = document.getElementById('roster-size');
+    const increaseRosterBtn = document.getElementById('increase-roster-btn');
+    const playMatchBtn = document.getElementById('play-match-btn');
+    const matchResultEl = document.getElementById('match-result');
+    
+    const startingElevenList = document.getElementById('starting-eleven');
+    const substitutesList = document.getElementById('substitutes');
+    const reservesList = document.getElementById('reserves');
+    const fullRosterList = document.getElementById('full-roster');
+    
+    const playerCountEl = document.getElementById('player-count');
+    const maxRosterSizeEl = document.getElementById('max-roster-size');
+
+
+    // --- OYUN FONKSİYONLARI ---
+
+    // Rastgele oyuncu oluşturur
+    function createRandomPlayer(id) {
+        const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+        const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+        return {
+            id: id,
+            name: `${firstName} ${lastName}`,
+            pos: POSITIONS[Math.floor(Math.random() * POSITIONS.length)],
+            ovr: Math.floor(Math.random() * 40) + 50 // 50-89 arası güç
+        };
+    }
+
+    // Oyunu başlatır
+    function initializeGame() {
+        for (let i = 1; i <= gameState.maxRosterSize; i++) {
+            gameState.roster.push(createRandomPlayer(i));
+        }
+        
+        // Kadrolara rastgele oyuncu ata (sadece başlangıçta)
+        for(let i = 0; i < 11; i++) gameState.squad.starting.push(gameState.roster[i].id);
+        for(let i = 11; i < 22; i++) gameState.squad.subs.push(gameState.roster[i].id);
+        for(let i = 22; i < 33; i++) gameState.squad.reserves.push(gameState.roster[i].id);
+
+        updateUI();
+    }
+
+    // Tüm arayüzü günceller
+    function updateUI() {
+        coinBalanceEl.textContent = gameState.coins;
+        rosterSizeEl.textContent = gameState.maxRosterSize;
+        maxRosterSizeEl.textContent = gameState.maxRosterSize;
+        playerCountEl.textContent = gameState.roster.length;
+        
+        renderFullRoster();
+        renderSquad();
+    }
+    
+    // Tüm oyuncu listesini ekrana çizer
+    function renderFullRoster() {
+        fullRosterList.innerHTML = '';
+        gameState.roster.forEach(player => {
+            const li = document.createElement('li');
+            li.className = 'player-item';
+            // Oyuncu zaten bir kadrodaysa işaretle
+            if (isPlayerInSquad(player.id)) {
+                li.classList.add('selected');
+            }
+            li.dataset.playerId = player.id;
+            li.innerHTML = `
+                <div>
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-pos">${player.pos}</span>
+                </div>
+                <span class="player-ovr">${player.ovr}</span>
+            `;
+            li.addEventListener('click', () => handlePlayerSelection(player.id));
+            fullRosterList.appendChild(li);
+        });
+    }
+
+    // Kadroları (İlk 11, Yedek, Dış) ekrana çizer
+    function renderSquad() {
+        renderSquadCategory(startingElevenList, gameState.squad.starting, 'starting');
+        renderSquadCategory(substitutesList, gameState.squad.subs, 'subs');
+        renderSquadCategory(reservesList, gameState.squad.reserves, 'reserves');
+    }
+    
+    function renderSquadCategory(listElement, squadArray, category) {
+        listElement.innerHTML = '';
+        squadArray.forEach(playerId => {
+            const player = getPlayerById(playerId);
+            if (player) {
+                const li = document.createElement('li');
+                li.className = 'player-item';
+                li.innerHTML = `
+                    <span>${player.name} (${player.ovr})</span>
+                    <button class="remove-btn" data-player-id="${player.id}" data-category="${category}">Çıkar</button>
+                `;
+                listElement.appendChild(li);
+            }
+        });
+    }
+    
+    // Bir oyuncunun herhangi bir kadroda olup olmadığını kontrol eder
+    function isPlayerInSquad(playerId) {
+        return gameState.squad.starting.includes(playerId) ||
+               gameState.squad.subs.includes(playerId) ||
+               gameState.squad.reserves.includes(playerId);
+    }
+    
+    // Oyuncuyu ID'sine göre bulur
+    function getPlayerById(playerId) {
+        return gameState.roster.find(p => p.id === playerId);
+    }
+    
+    // Oyuncu seçme ve kadroya atama mantığı
+    function handlePlayerSelection(playerId) {
+        const player = getPlayerById(playerId);
+        if (!player) return;
+
+        // Oyuncu zaten bir kadrodaysa hiçbir şey yapma
+        if (isPlayerInSquad(playerId)) {
+            alert('Bu oyuncu zaten bir kadroda. Önce kadrodan çıkarmanız gerekir.');
+            return;
+        }
+
+        // Kadrolarda yer var mı kontrol et
+        if (gameState.squad.starting.length < 11) {
+            gameState.squad.starting.push(playerId);
+        } else if (gameState.squad.subs.length < 11) {
+            gameState.squad.subs.push(playerId);
+        } else if (gameState.squad.reserves.length < 11) {
+            gameState.squad.reserves.push(playerId);
+        } else {
+            alert('Tüm kadrolar dolu! Bir oyuncuyu kadrodan çıkarmalısınız.');
+            return;
+        }
+        updateUI();
+    }
+    
+    // Kadrodan oyuncu çıkarma
+    function removePlayerFromSquad(playerId, category) {
+        gameState.squad[category] = gameState.squad[category].filter(id => id !== playerId);
+        updateUI();
+    }
+    
+    // Maç Simülasyonu
+    function playMatch() {
+        if (gameState.squad.starting.length < 11) {
+            alert('Maça çıkmak için İlk 11\'i tamamlamalısın!');
+            return;
+        }
+
+        let userTeamOvr = gameState.squad.starting.reduce((sum, playerId) => {
+            return sum + getPlayerById(playerId).ovr;
+        }, 0);
+        
+        let botTeamOvr = (Math.floor(Math.random() * 20) + 70) * 11; // Bot gücü 70-89 arası
+        
+        userTeamOvr = userTeamOvr / 11; // Ortalama güç
+        botTeamOvr = botTeamOvr / 11;
+
+        let userGoals = 0;
+        let botGoals = 0;
+        
+        // Basit gol atma simülasyonu
+        const ovrDifference = userTeamOvr - botTeamOvr;
+        const baseGoalChance = 0.3; // Temel gol atma şansı
+
+        for(let i=0; i<5; i++){ // 5 önemli pozisyon olsun
+            // Kullanıcı takımı
+            let userChance = baseGoalChance + (ovrDifference / 100);
+            if(Math.random() < userChance) userGoals++;
+            // Bot takımı
+            let botChance = baseGoalChance - (ovrDifference / 100);
+            if(Math.random() < botChance) botGoals++;
+        }
+        
+        let resultText = `Maç Sonucu: Sen ${userGoals} - ${botGoals} Rakip`;
+        if (userGoals > botGoals) {
+            resultText += "<br>🎉 Kazandın! +50 Coin";
+            gameState.coins += 50;
+        } else if (botGoals > userGoals) {
+            resultText += "<br>😔 Kaybettin.";
+        } else {
+            resultText += "<br>🤝 Berabere! +10 Coin";
+            gameState.coins += 10;
+        }
+        
+        matchResultEl.innerHTML = resultText;
+        matchResultEl.style.display = 'block';
+        updateUI();
+    }
+    
+    // Kadro kapasitesini arttırma
+    function increaseRoster() {
+        if (gameState.coins >= 100) {
+            gameState.coins -= 100;
+            gameState.maxRosterSize += 100;
+            
+            // Yeni oyuncuları kadroya ekle
+            const currentSize = gameState.roster.length;
+            for(let i = currentSize + 1; i <= gameState.maxRosterSize; i++) {
+                gameState.roster.push(createRandomPlayer(i));
+            }
+            
+            alert(`Kadro kapasitesi ${gameState.maxRosterSize}'e yükseltildi!`);
+            updateUI();
+        } else {
+            alert('Yeterli coininiz yok!');
+        }
+    }
+
+
+    // --- OLAY DİNLEYİCİLERİ (EVENT LISTENERS) ---
+    increaseRosterBtn.addEventListener('click', increaseRoster);
+    playMatchBtn.addEventListener('click', playMatch);
+    
+    // Kadrodan oyuncu çıkarma butonları için olay dinleyicisi (Event Delegation)
+    document.getElementById('squad-panel').addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('remove-btn')) {
+            const playerId = parseInt(e.target.dataset.playerId);
+            const category = e.target.dataset.category;
+            removePlayerFromSquad(playerId, category);
+        }
+    });
+
+    // --- OYUNU BAŞLAT ---
+    initializeGame();
+});
+</script>
+</body>
+</html>
