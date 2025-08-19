@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbol Krallığı [PROTOTİP V1.0]</title>
+    <title>Futbol Krallığı [PROTOTİP V1.1 - Düzeltilmiş]</title>
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
@@ -96,7 +96,7 @@
     <div id="game-container" style="visibility: hidden;">
         <div id="top-bar-template" style="display: none;">
             <div class="top-bar">
-                <button class="top-bar-btn" onclick="App.switchView('menu-view')">&lt; Ana Menü</button>
+                <button id="back-to-menu-btn" class="top-bar-btn">&lt; Ana Menü</button>
                 <div class="currency-display">💰 <span id="coin-balance"></span></div>
             </div>
         </div>
@@ -104,19 +104,19 @@
         <div id="menu-view" class="game-view active">
             <h1 class="main-title">FUTBOL KRALLIĞI</h1>
             <nav class="main-nav">
-                <button class="nav-btn" onclick="App.switchView('store-view')">Dükkan</button>
-                <button class="nav-btn" onclick="App.switchView('squad-view')">Kadro Yönetimi</button>
-                <button class="nav-btn" onclick="App.switchView('match-view')">Maç Yap</button>
-                <button class="nav-btn" onclick="App.switchView('settings-view')">Ayarlar</button>
+                <button class="nav-btn" data-view="store-view">Dükkan</button>
+                <button class="nav-btn" data-view="squad-view">Kadro Yönetimi</button>
+                <button class="nav-btn" data-view="match-view">Maç Yap</button>
+                <button class="nav-btn" data-view="settings-view">Ayarlar</button>
             </nav>
         </div>
 
         <div id="store-view" class="game-view">
             <div class="page-content">
                 <div class="pack-store">
-                    <div class="pack"><h3>Bronz Paket</h3><p>Genel Oyuncular</p><button class="pack-btn" onclick="App.openPack('bronze')">50 💰</button></div>
-                    <div class="pack"><h3>Gümüş Paket</h3><p>İyi Oyuncular</p><button class="pack-btn" onclick="App.openPack('silver')">150 💰</button></div>
-                    <div class="pack"><h3>Altın Paket</h3><p>Elit Oyuncular</p><button class="pack-btn" onclick="App.openPack('gold')">500 💰</button></div>
+                    <div class="pack"><h3>Bronz Paket</h3><p>Genel Oyuncular</p><button class="pack-btn" data-pack="bronze">50 💰</button></div>
+                    <div class="pack"><h3>Gümüş Paket</h3><p>İyi Oyuncular</p><button class="pack-btn" data-pack="silver">150 💰</button></div>
+                    <div class="pack"><h3>Altın Paket</h3><p>Elit Oyuncular</p><button class="pack-btn" data-pack="gold">500 💰</button></div>
                 </div>
                 <hr style="border-color: var(--border-color); margin: 30px 0;">
                 <div id="pack-reveal-area"></div>
@@ -153,7 +153,8 @@
              <div class="page-content">
                 <h2>Ayarlar</h2>
                 <h3>Tema</h3>
-                <button onclick="App.setTheme('dark')">Koyu</button> <button onclick="App.setTheme('light')">Açık</button>
+                <button class="theme-btn" data-theme="dark">Koyu</button> 
+                <button class="theme-btn" data-theme="light">Açık</button>
             </div>
         </div>
     </div>
@@ -164,98 +165,45 @@
         // OYUNCU VERİTABANI
         // ===================================================================================
         const PLAYER_DB = [
-            { id: 1, name: "Uğurcan Çakır", pos: "GK", ovr: 82, rarity: "gold" },
-            { id: 2, name: "Altay Bayındır", pos: "GK", ovr: 78, rarity: "silver" },
-            { id: 3, name: "Mert Günok", pos: "GK", ovr: 77, rarity: "silver" },
-            { id: 4, name: "Çağlar Söyüncü", pos: "CB", ovr: 80, rarity: "gold" },
-            { id: 5, name: "Merih Demiral", pos: "CB", ovr: 79, rarity: "silver" },
-            { id: 6, name: "Kaan Ayhan", pos: "CB", ovr: 76, rarity: "silver" },
-            { id: 7, name: "Ozan Kabak", pos: "CB", ovr: 75, rarity: "silver" },
-            { id: 8, name: "Zeki Çelik", pos: "RB", ovr: 77, rarity: "silver" },
-            { id: 9, name: "Mert Müldür", pos: "RB", ovr: 74, rarity: "bronze" },
-            { id: 10, name: "Ferdi Kadıoğlu", pos: "LB", ovr: 79, rarity: "silver" },
-            { id: 11, name: "Rıdvan Yılmaz", pos: "LB", ovr: 73, rarity: "bronze" },
-            { id: 12, name: "Hakan Çalhanoğlu", pos: "CM", ovr: 85, rarity: "gold" },
-            { id: 13, name: "Orkun Kökçü", pos: "CM", ovr: 81, rarity: "gold" },
-            { id: 14, name: "Salih Özcan", pos: "CDM", ovr: 78, rarity: "silver" },
-            { id: 15, name: "İsmail Yüksek", pos: "CDM", ovr: 75, rarity: "silver" },
-            { id: 16, name: "Okay Yokuşlu", pos: "CDM", ovr: 74, rarity: "bronze" },
-            { id: 17, name: "Arda Güler", pos: "CAM", ovr: 80, rarity: "gold" },
-            { id: 18, name: "Yusuf Yazıcı", pos: "CAM", ovr: 77, rarity: "silver" },
-            { id: 19, name: "Abdülkadir Ömür", pos: "CAM", ovr: 75, rarity: "silver" },
-            { id: 20, name: "Kerem Aktürkoğlu", pos: "LW", ovr: 78, rarity: "silver" },
-            { id: 21, name: "Kenan Yıldız", pos: "LW", ovr: 76, rarity: "silver" },
-            { id: 22, name: "Cengiz Ünder", pos: "RW", ovr: 79, rarity: "silver" },
-            { id: 23, name: "İrfan Can Kahveci", pos: "RW", ovr: 77, rarity: "silver" },
-            { id: 24, name: "Yunus Akgün", pos: "RW", ovr: 74, rarity: "bronze" },
-            { id: 25, name: "Enes Ünal", pos: "ST", ovr: 78, rarity: "silver" },
-            { id: 26, name: "Barış Alper Yılmaz", pos: "ST", ovr: 75, rarity: "silver" },
-            { id: 27, name: "Umut Nayir", pos: "ST", ovr: 72, rarity: "bronze" },
-            { id: 28, name: "Bertuğ Yıldırım", pos: "ST", ovr: 70, rarity: "bronze" },
-            // ... daha fazla bronz oyuncu
-            { id: 29, name: "Can Bozdoğan", pos: "CM", ovr: 71, rarity: "bronze" },
-            { id: 30, name: "Doğukan Sinik", pos: "LW", ovr: 69, rarity: "bronze" },
-            { id: 31, name: "Eren Dinkçi", pos: "RW", ovr: 68, rarity: "bronze" },
-            { id: 32, name: "Halil Dervişoğlu", pos: "ST", ovr: 69, rarity: "bronze" },
-            { id: 33, name: "Tiago Çukur", pos: "ST", ovr: 65, rarity: "bronze" },
-            { id: 34, name: "Serdar Dursun", pos: "ST", ovr: 71, rarity: "bronze" },
-            { id: 35, name: "Berkan Kutlu", pos: "CM", ovr: 72, rarity: "bronze" },
-            { id: 36, name: "Taylan Antalyalı", pos: "CDM", ovr: 70, rarity: "bronze" },
-            { id: 37, name: "Cenk Özkaçar", pos: "CB", ovr: 72, rarity: "bronze" },
-            { id: 38, name: "Samet Akaydın", pos: "CB", ovr: 71, rarity: "bronze" },
-            { id: 39, name: "Eren Elmalı", pos: "LB", ovr: 70, rarity: "bronze" },
-            { id: 40, name: "Onur Bulut", pos: "RB", ovr: 69, rarity: "bronze" },
-            { id: 41, name: "Deniz Türüç", pos: "RW", ovr: 73, rarity: "bronze" },
-            { id: 42, name: "Emre Akbaba", pos: "CAM", ovr: 72, rarity: "bronze" },
-            { id: 43, name: "Efecan Karaca", pos: "RW", ovr: 71, rarity: "bronze" },
-            { id: 44, name: "Salih Uçan", pos: "CM", ovr: 74, rarity: "bronze" },
-            { id: 45, name: "Dorukhan Toköz", pos: "CDM", ovr: 73, rarity: "bronze" },
-            { id: 46, name: "Abdülkerim Bardakcı", pos: "CB", ovr: 75, rarity: "silver" },
-            { id: 47, name: "İrfan Can Eğribayat", pos: "GK", ovr: 73, rarity: "bronze" },
-            { id: 48, name: "Emre Kılınç", pos: "LW", ovr: 72, rarity: "bronze" },
-            { id: 49, name: "Yusuf Sarı", pos: "RW", ovr: 71, rarity: "bronze" },
-            { id: 50, name: "Umut Bozok", pos: "ST", ovr: 74, rarity: "bronze" }
+            { id: 1, name: "Uğurcan Çakır", pos: "GK", ovr: 82, rarity: "gold" }, { id: 2, name: "Altay Bayındır", pos: "GK", ovr: 78, rarity: "silver" }, { id: 3, name: "Mert Günok", pos: "GK", ovr: 77, rarity: "silver" }, { id: 4, name: "Çağlar Söyüncü", pos: "CB", ovr: 80, rarity: "gold" }, { id: 5, name: "Merih Demiral", pos: "CB", ovr: 79, rarity: "silver" }, { id: 6, name: "Kaan Ayhan", pos: "CB", ovr: 76, rarity: "silver" }, { id: 7, name: "Ozan Kabak", pos: "CB", ovr: 75, rarity: "silver" }, { id: 8, name: "Zeki Çelik", pos: "RB", ovr: 77, rarity: "silver" }, { id: 9, name: "Mert Müldür", pos: "RB", ovr: 74, rarity: "bronze" }, { id: 10, name: "Ferdi Kadıoğlu", pos: "LB", ovr: 79, rarity: "silver" }, { id: 11, name: "Rıdvan Yılmaz", pos: "LB", ovr: 73, rarity: "bronze" }, { id: 12, name: "Hakan Çalhanoğlu", pos: "CM", ovr: 85, rarity: "gold" }, { id: 13, name: "Orkun Kökçü", pos: "CM", ovr: 81, rarity: "gold" }, { id: 14, name: "Salih Özcan", pos: "CDM", ovr: 78, rarity: "silver" }, { id: 15, name: "İsmail Yüksek", pos: "CDM", ovr: 75, rarity: "silver" }, { id: 16, name: "Okay Yokuşlu", pos: "CDM", ovr: 74, rarity: "bronze" }, { id: 17, name: "Arda Güler", pos: "CAM", ovr: 80, rarity: "gold" }, { id: 18, name: "Yusuf Yazıcı", pos: "CAM", ovr: 77, rarity: "silver" }, { id: 19, name: "Abdülkadir Ömür", pos: "CAM", ovr: 75, rarity: "silver" }, { id: 20, name: "Kerem Aktürkoğlu", pos: "LW", ovr: 78, rarity: "silver" }, { id: 21, name: "Kenan Yıldız", pos: "LW", ovr: 76, rarity: "silver" }, { id: 22, name: "Cengiz Ünder", pos: "RW", ovr: 79, rarity: "silver" }, { id: 23, name: "İrfan Can Kahveci", pos: "RW", ovr: 77, rarity: "silver" }, { id: 24, name: "Yunus Akgün", pos: "RW", ovr: 74, rarity: "bronze" }, { id: 25, name: "Enes Ünal", pos: "ST", ovr: 78, rarity: "silver" }, { id: 26, name: "Barış Alper Yılmaz", pos: "ST", ovr: 75, rarity: "silver" }, { id: 27, name: "Umut Nayir", pos: "ST", ovr: 72, rarity: "bronze" }, { id: 28, name: "Bertuğ Yıldırım", pos: "ST", ovr: 70, rarity: "bronze" }, { id: 29, name: "Can Bozdoğan", pos: "CM", ovr: 71, rarity: "bronze" }, { id: 30, name: "Doğukan Sinik", pos: "LW", ovr: 69, rarity: "bronze" }, { id: 31, name: "Eren Dinkçi", pos: "RW", ovr: 68, rarity: "bronze" }, { id: 32, name: "Halil Dervişoğlu", pos: "ST", ovr: 69, rarity: "bronze" }, { id: 33, name: "Tiago Çukur", pos: "ST", ovr: 65, rarity: "bronze" }, { id: 34, name: "Serdar Dursun", pos: "ST", ovr: 71, rarity: "bronze" }, { id: 35, name: "Berkan Kutlu", pos: "CM", ovr: 72, rarity: "bronze" }, { id: 36, name: "Taylan Antalyalı", pos: "CDM", ovr: 70, rarity: "bronze" }, { id: 37, name: "Cenk Özkaçar", pos: "CB", ovr: 72, rarity: "bronze" }, { id: 38, name: "Samet Akaydın", pos: "CB", ovr: 71, rarity: "bronze" }, { id: 39, name: "Eren Elmalı", pos: "LB", ovr: 70, rarity: "bronze" }, { id: 40, name: "Onur Bulut", pos: "RB", ovr: 69, rarity: "bronze" }, { id: 41, name: "Deniz Türüç", pos: "RW", ovr: 73, rarity: "bronze" }, { id: 42, name: "Emre Akbaba", pos: "CAM", ovr: 72, rarity: "bronze" }, { id: 43, name: "Efecan Karaca", pos: "RW", ovr: 71, rarity: "bronze" }, { id: 44, name: "Salih Uçan", pos: "CM", ovr: 74, rarity: "bronze" }, { id: 45, name: "Dorukhan Toköz", pos: "CDM", ovr: 73, rarity: "bronze" }, { id: 46, name: "Abdülkerim Bardakcı", pos: "CB", ovr: 75, rarity: "silver" }, { id: 47, name: "İrfan Can Eğribayat", pos: "GK", ovr: 73, rarity: "bronze" }, { id: 48, name: "Emre Kılınç", pos: "LW", ovr: 72, rarity: "bronze" }, { id: 49, name: "Yusuf Sarı", pos: "RW", ovr: 71, rarity: "bronze" }, { id: 50, name: "Umut Bozok", pos: "ST", ovr: 74, rarity: "bronze" }
         ];
 
         // ===================================================================================
         // OYUN MOTORU: APP NESNESİ
         // ===================================================================================
         const App = {
-            // --- Oyun Durumu ---
-            state: {
-                coins: 2000,
-                roster: [], // {db_id: 1, unique_id: 123}
-                squad: { // unique_id'ler tutulacak
-                    'FWD1': null, 'FWD2': null,
-                    'MID1': null, 'MID2': null, 'MID3': null, 'MID4': null,
-                    'DEF1': null, 'DEF2': null, 'DEF3': null, 'DEF4': null,
-                    'GK': null
-                },
-                currentView: 'menu-view',
-                theme: 'dark'
-            },
+            state: { coins: 2000, roster: [], squad: {}, currentView: 'menu-view', theme: 'dark' },
 
-            // --- Başlatma ---
             init() {
                 this.loadState();
+                this.bindEvents(); // DÜZELTME: Olay dinleyicilerini buradan bağlıyoruz.
                 this.updateUI();
                 document.getElementById('game-container').style.visibility = 'visible';
                 this.renderPitch();
             },
 
-            // --- Veri Yönetimi ---
-            saveState() {
-                localStorage.setItem('football_game_state', JSON.stringify(this.state));
+            // DÜZELTME: Tüm olay dinleyicileri merkezi bir yerden, güvenli bir şekilde bağlanıyor.
+            bindEvents() {
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+                });
+                document.querySelectorAll('.pack-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.openPack(btn.dataset.pack));
+                });
+                document.querySelectorAll('.theme-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.setTheme(btn.dataset.theme));
+                });
+                // Not: Geri butonu her sayfa değişiminde yeniden oluştuğu için
+                // olay dinleyicisini switchView içinde dinamik olarak ekleyeceğiz.
             },
+
+            saveState() { localStorage.setItem('football_game_state', JSON.stringify(this.state)); },
             loadState() {
                 const savedState = localStorage.getItem('football_game_state');
-                if (savedState) {
-                    this.state = JSON.parse(savedState);
-                }
+                if (savedState) this.state = JSON.parse(savedState);
                 document.body.dataset.theme = this.state.theme;
             },
 
-            // --- Arayüz Yönetimi ---
             switchView(viewId) {
                 this.state.currentView = viewId;
                 document.querySelectorAll('.game-view').forEach(v => v.classList.remove('active'));
@@ -263,40 +211,31 @@
                 newView.classList.add('active');
                 
                 const topBarContainer = document.getElementById('top-bar-template');
-                // Önceki top bar'ı temizle
                 const oldTopBar = document.querySelector('.top-bar');
                 if (oldTopBar) oldTopBar.remove();
 
                 if (viewId !== 'menu-view') {
                     const newTopBar = topBarContainer.firstElementChild.cloneNode(true);
                     newView.prepend(newTopBar);
+                    // Geri butonuna olay dinleyicisini burada ekliyoruz
+                    newTopBar.querySelector('#back-to-menu-btn').addEventListener('click', () => this.switchView('menu-view'));
                 }
 
                 this.updateUI();
-                if (viewId === 'squad-view') {
-                    this.renderRoster();
-                    this.renderPitch();
-                }
-                if (viewId === 'match-view') {
-                    this.runMatchSimulation();
-                }
+                if (viewId === 'squad-view') { this.renderRoster(); this.renderPitch(); }
+                if (viewId === 'match-view') { this.runMatchSimulation(); }
             },
             updateUI() {
                 const coinEl = document.getElementById('coin-balance');
                 if(coinEl) coinEl.textContent = this.state.coins;
             },
 
-            // --- Dükkan ve Paketler ---
             openPack(type) {
                 const costs = { bronze: 50, silver: 150, gold: 500 };
                 if (this.state.coins < costs[type]) { alert("Yetersiz Bakiye!"); return; }
                 this.state.coins -= costs[type];
 
-                const chances = {
-                    bronze: { gold: 0.01, silver: 0.1, bronze: 0.89 },
-                    silver: { gold: 0.05, silver: 0.3, bronze: 0.65 },
-                    gold: { gold: 0.2, silver: 0.7, bronze: 0.1 }
-                };
+                const chances = { bronze: { gold: 0.01, silver: 0.1, bronze: 0.89 }, silver: { gold: 0.05, silver: 0.3, bronze: 0.65 }, gold: { gold: 0.2, silver: 0.7, bronze: 0.1 } };
                 const rand = Math.random();
                 let rarity;
                 if (rand < chances[type].gold) rarity = 'gold';
@@ -319,10 +258,13 @@
                     </div>`;
             },
 
-            // --- Kadro Yönetimi ---
             renderRoster() {
                 const rosterList = document.getElementById('roster-list');
                 rosterList.innerHTML = '';
+                if (this.state.roster.length === 0) {
+                    rosterList.innerHTML = '<p>Hiç oyuncun yok.</p>';
+                    return;
+                }
                 this.state.roster.forEach(playerInstance => {
                     const playerInfo = PLAYER_DB.find(p => p.id === playerInstance.db_id);
                     const el = document.createElement('div');
@@ -332,14 +274,10 @@
                 });
             },
             renderPitch() {
-                const formation = {
-                    fwd: ['FWD1', 'FWD2'],
-                    mid: ['MID1', 'MID2', 'MID3', 'MID4'],
-                    def: ['DEF1', 'DEF2', 'DEF3', 'DEF4'],
-                    gk: ['GK']
-                };
+                const formation = { fwd: ['FWD1', 'FWD2'], mid: ['MID1', 'MID2', 'MID3', 'MID4'], def: ['DEF1', 'DEF2', 'DEF3', 'DEF4'], gk: ['GK'] };
                 Object.keys(formation).forEach(line => {
                     const lineEl = document.getElementById(`pitch-${line}`);
+                    if (!lineEl) return;
                     lineEl.innerHTML = '';
                     formation[line].forEach(posId => {
                         const slotEl = document.createElement('div');
@@ -350,45 +288,22 @@
                 });
             },
             
-            // --- Maç Simülasyonu ---
             runMatchSimulation() {
                 const logEl = document.getElementById('match-report-log');
+                if (!logEl) return;
                 logEl.innerHTML = '';
-                let minute = 0;
-                let homeGoals = 0, awayGoals = 0;
-
-                const addEvent = (min, text, type = '') => {
-                    logEl.innerHTML += `<div class="match-event ${type}"><span class="event-minute">${min}'</span> - ${text}</div>`;
-                    logEl.scrollTop = logEl.scrollHeight;
-                };
-
+                let minute = 0, homeGoals = 0, awayGoals = 0;
+                const addEvent = (min, text, type = '') => { logEl.innerHTML += `<div class="match-event ${type}"><span class="event-minute">${min}'</span> - ${text}</div>`; logEl.scrollTop = logEl.scrollHeight; };
                 addEvent(0, "Maç başladı!");
-                
                 const interval = setInterval(() => {
                     minute += Math.floor(Math.random() * 5) + 1;
-                    if (minute >= 90) {
-                        clearInterval(interval);
-                        addEvent(90, `Maç Bitti! Skor: ${homeGoals} - ${awayGoals}`);
-                        return;
-                    }
-
+                    if (minute >= 90) { clearInterval(interval); addEvent(90, `Maç Bitti! Skor: ${homeGoals} - ${awayGoals}`); return; }
                     if(minute > 45 && minute < 50) addEvent(45, "İlk yarı sona erdi.");
-
                     const rand = Math.random();
-                    if(rand > 0.7) { // %30 pozisyon şansı
-                        if (rand > 0.85) { // %15 gol şansı
-                            homeGoals++;
-                            addEvent(minute, `GOOOOL! Harika bir vuruş! Skor ${homeGoals}-${awayGoals}`, 'event-goal');
-                        } else {
-                            addEvent(minute, `Tehlikeli atak! Top direkten döndü!`);
-                        }
-                    } else {
-                         addEvent(minute, `Orta saha mücadelesi...`);
-                    }
+                    if(rand > 0.7) { if (rand > 0.85) { homeGoals++; addEvent(minute, `GOOOOL! Harika bir vuruş! Skor ${homeGoals}-${awayGoals}`, 'event-goal'); } else { addEvent(minute, `Tehlikeli atak! Top direkten döndü!`); } } else { addEvent(minute, `Orta saha mücadelesi...`); }
                 }, 500);
             },
 
-            // --- Ayarlar ---
             setTheme(themeName) {
                 this.state.theme = themeName;
                 document.body.dataset.theme = themeName;
@@ -396,20 +311,12 @@
             }
         };
 
-        // ===================================================================================
-        // OYUNU BAŞLAT
-        // ===================================================================================
         document.addEventListener('DOMContentLoaded', () => {
             App.init();
         });
 
     } catch (error) {
-        document.body.innerHTML = `<div style="padding: 20px; color: red; background: white; border: 5px solid red;">
-            <h1>KRİTİK HATA! OYUN YÜKLENEMEDİ!</h1>
-            <p>Bir sorun oluştu. Lütfen sayfayı <strong>Ctrl+Shift+R</strong> ile yeniden yüklemeyi deneyin.</p>
-            <p><strong>Hata Detayı:</strong> ${error.message}</p>
-            <pre><strong>Teknik Detay:</strong> ${error.stack}</pre>
-        </div>`;
+        document.body.innerHTML = `<div style="padding: 20px; color: red; background: white; border: 5px solid red;"><h1>KRİTİK HATA!</h1><p><strong>Hata:</strong> ${error.message}</p><pre>${error.stack}</pre></div>`;
         console.error("Oyun Yükleme Hatası:", error);
     }
     </script>
