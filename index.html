@@ -3,248 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbol Krallığı (Stabil Final Versiyon)</title>
+    <title>Futbol Krallığı (Gelişmiş Versiyon)</title>
     
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
 
     <style>
-        /* TEMEL DEĞİŞKENLER */
+        /* TEMA DEĞİŞKENLERİ: Ayarlardan tema değiştirmeyi bu değişkenler sağlar */
         :root {
             --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             --primary-color: #1a73e8;
             --accent-color: #00e676;
             --text-color: #ffffff;
-            /* DÜZELTME: Kart ve butonların arkaplanını daha belirgin hale getirdik */
             --card-bg: rgba(255, 255, 255, 0.1); 
             --border-color: rgba(255, 255, 255, 0.2);
             --error-color: #ff5252;
+            --page-bg: transparent; /* Koyu temada sayfa arkaplanı gradyan olacak */
+            --item-bg: rgba(0,0,0,0.2);
+            --item-border: var(--border-color);
         }
 
-        /* SAYFA GENELİ */
+        /* AÇIK TEMA: body[data-theme='light'] seçicisi ile bu değişkenler aktif olur */
+        [data-theme='light'] {
+            --bg-gradient: linear-gradient(135deg, #e9e9e9 0%, #ffffff 100%);
+            --primary-color: #0052d4;
+            --accent-color: #00b894;
+            --text-color: #2c3e50;
+            --card-bg: rgba(0, 0, 0, 0.05);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --page-bg: #ffffff; /* Açık temada sayfaların arkaplanı beyaz olacak */
+            --item-bg: #f9f9f9;
+            --item-border: #e0e0e0;
+        }
+
         body {
             font-family: 'Segoe UI', sans-serif;
-            /* ANA DÜZELTME: Arkaplanı hem body'e hem de .game-view'e uygulayarak
-               görünmeme sorununu kökünden çözüyoruz. */
             background: var(--bg-gradient);
             color: var(--text-color);
             margin: 0;
             overflow: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
         }
 
-        /* OYUN EKRANLARI (ANA DÜZELTME BURADA) */
         .game-view {
-            display: none; 
-            width: 100vw;
-            height: 100vh;
-            padding: 20px;
-            box-sizing: border-box;
-            animation: fadeIn 0.5s ease;
-            position: absolute;
-            top: 0;
-            left: 0;
-            overflow-y: auto;
-            /* ANA DÜZELTME: Her oyun ekranının kendi arkaplanı olmasını garantiliyoruz.
-               Bu sayede body stili çalışmasa bile arkaplan her zaman koyu olacaktır. */
-            background: var(--bg-gradient);
+            display: none; width: 100vw; height: 100vh;
+            padding: 20px; box-sizing: border-box;
+            animation: fadeIn 0.5s ease; position: absolute;
+            top: 0; left: 0; overflow-y: auto;
         }
-
-        .game-view.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
-        }
+        .game-view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         /* ANA MENÜ */
-        #menu-view {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .main-title {
-            font-size: 4em;
-            font-weight: bold;
-            text-shadow: 0 0 20px var(--accent-color);
-            margin-bottom: 20px;
-        }
-
-        .menu-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            width: 100%;
-            max-width: 600px;
-        }
-
-        .menu-btn {
-            background: var(--card-bg);
-            border: 2px solid var(--border-color);
-            color: var(--text-color);
-            padding: 25px;
-            font-size: 1.5em;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-
-        .menu-btn:hover {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
+        #menu-view { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .main-title { font-size: 4em; font-weight: bold; text-shadow: 0 0 20px var(--accent-color); margin-bottom: 20px; transition: text-shadow 0.5s ease; }
+        .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 600px; }
+        .menu-btn { background: var(--card-bg); border: 2px solid var(--border-color); color: var(--text-color); padding: 25px; font-size: 1.5em; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(5px); }
+        .menu-btn:hover { background-color: var(--primary-color); border-color: var(--primary-color); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         
-        /* ÜST BAR VE MESAJ KUTUSU */
-        .top-bar-element {
-            position: fixed;
-            z-index: 10;
-            background: var(--card-bg);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1.2em;
-            border: 1px solid var(--border-color);
-            backdrop-filter: blur(5px);
-            display: none;
-        }
-        
+        /* ÜST BAR */
+        .top-bar-element { position: fixed; z-index: 10; background: var(--card-bg); color: var(--text-color); padding: 10px 20px; border-radius: 20px; font-size: 1.2em; border: 1px solid var(--border-color); backdrop-filter: blur(5px); display: none; }
         #currency-display { top: 20px; right: 20px; }
         #back-to-menu { top: 20px; left: 20px; cursor: pointer; }
 
-        #message-box {
-            position: fixed;
-            bottom: -100px; /* Başlangıçta ekranın dışında */
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--error-color);
-            padding: 15px 25px;
-            border-radius: 10px;
-            z-index: 20;
-            opacity: 0;
-            transition: all 0.5s ease;
-        }
-        #message-box.show {
-            bottom: 20px;
-            opacity: 1;
-        }
+        /* SAYFA İÇERİĞİ VE OYUNCU LİSTELERİ */
+        .page-content { background: var(--page-bg); max-width: 900px; margin: 80px auto 20px auto; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .player-list { list-style: none; padding: 0; margin: 0; }
+        .player-item { display: flex; justify-content: space-between; align-items: center; background: var(--item-bg); border: 1px solid var(--item-border); padding: 15px; margin-bottom: 10px; border-radius: 10px; }
+        .player-info { font-size: 1.2em; }
+        .player-ovr { font-size: 1.5em; font-weight: bold; color: var(--primary-color); }
 
-        /* DİĞER EKRANLAR */
-        .page-content {
-            padding-top: 80px;
-            text-align: center;
-        }
-
-        #open-pack-btn {
-            padding: 20px 40px;
-            font-size: 1.5em;
-            cursor: pointer;
-            background-color: var(--accent-color);
-            color: #0f2027;
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 0 20px var(--accent-color);
-            transition: all 0.3s ease;
-        }
-        #open-pack-btn:hover { transform: scale(1.05); }
-
-        #pack-results {
-            margin-top: 30px;
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+        /* AYARLAR MENÜSÜ */
+        .setting-category { margin-bottom: 30px; }
+        .setting-category h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .setting-options button { font-size: 1em; padding: 10px 20px; margin-right: 10px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-color); cursor: pointer; }
+        .setting-options button.active { background: var(--accent-color); color: #0f2027; border-color: var(--accent-color); }
         
-        .player-card {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 20px;
-            width: 150px;
-            text-align: center;
-            animation: reveal 0.5s ease backwards;
-        }
-        .player-card .ovr { font-size: 2.5em; font-weight: bold; }
-        .player-card .name { font-size: 1.1em; }
-        .player-card .pos { color: #ccc; }
-        @keyframes reveal { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
         #match-view-3d { padding: 0; }
         #threejs-canvas { width: 100%; height: 100%; display: block; }
-        .info-box-3d { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background-color: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; text-align: center; }
     </style>
 </head>
-<body>
-
-    <div id="currency-display" class="top-bar-element">💰 Coins: <span id="coin-balance">1000</span></div>
+<body data-theme="dark"> <div id="currency-display" class="top-bar-element">💰 Coins: <span id="coin-balance">1000</span></div>
     <div id="back-to-menu" class="top-bar-element">&lt; Menüye Dön</div>
-    <div id="message-box"></div>
 
     <div id="menu-view" class="game-view">
-        <h1 class="main-title">FUTBOL KRALLIĞI</h1>
+        <h1 id="main-title" class="main-title">FUTBOL KRALLIĞI</h1>
         <div class="menu-buttons">
             <button class="menu-btn" data-view="packs-view">Paketler</button>
             <button class="menu-btn" data-view="squad-view">Kadro</button>
-            <button class="menu-btn" data-view="match-view-3d">3D Maç (Beta)</button>
-            <button class="menu-btn" data-view="dev-view">Geliştir</button>
+            <button class="menu-btn" data-view="match-view-3d">Maç Yap</button>
+            <button class="menu-btn" data-view="ayarlar-view">Ayarlar</button>
         </div>
     </div>
     
     <div id="packs-view" class="game-view">
         <div class="page-content">
             <h2>Paket Dükkanı</h2>
-            <p>Yeni oyuncular keşfetmek için paket aç!</p>
-            <button id="open-pack-btn">Standart Paket Aç (150 Coin)</button>
-            <div id="pack-results"></div>
+            <p>Yeni bir oyuncu keşfetmek için paket aç!</p>
+            <button id="open-pack-btn">Oyuncu Paketi Aç (50 Coin)</button>
+            <div id="pack-results" style="margin-top: 20px;"></div>
         </div>
     </div>
     
     <div id="squad-view" class="game-view">
         <div class="page-content">
-            <h2>Kadro Yönetimi</h2>
-            <p>Paketlerden çıkardığın oyuncuları burada görecek ve yönetecek.</p>
+            <h2>Takım Kadrosu</h2>
+            <p>Mevcut oyuncuların:</p>
+            <ul id="squad-player-list" class="player-list"></ul>
         </div>
     </div>
-    
+
     <div id="dev-view" class="game-view">
         <div class="page-content">
-            <h2>Geliştirme Merkezi</h2>
-            <p>Oyuncularını burada antrenman yaptırıp güçlerini artıracaksın.</p>
+            <h2>Oyuncu Geliştirme</h2>
+            <p>Geliştirmek istediğin oyuncuyu seç:</p>
+            <ul id="dev-player-list" class="player-list"></ul>
+        </div>
+    </div>
+
+    <div id="ayarlar-view" class="game-view">
+        <div class="page-content">
+            <h2>Ayarlar</h2>
+            <div class="setting-category">
+                <h3>Tema Seçimi</h3>
+                <div id="theme-options" class="setting-options">
+                    <button data-theme="dark">Koyu Tema</button>
+                    <button data-theme="light">Açık Tema</button>
+                </div>
+            </div>
+            <div class="setting-category">
+                <h3>Dil Seçimi</h3>
+                <div id="lang-options" class="setting-options">
+                    <button data-lang="tr">Türkçe</button>
+                    <button data-lang="en">English</button>
+                </div>
+            </div>
         </div>
     </div>
     
     <div id="match-view-3d" class="game-view">
-        <div id="info-box-3d" class="info-box-3d">
-            <p>3D Sahne Yükleniyor...</p>
-            <small>Fare ile sahneyi döndürebilir, tekerlek ile yakınlaşabilirsiniz.</small>
-        </div>
         <canvas id="threejs-canvas"></canvas>
     </div>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Oyun değişkenleri ve element referansları
+            //--- OYUN VERİLERİ VE DEĞİŞKENLER ---
             const gameState = { coins: 1000, roster: [] };
             let nextPlayerId = 1;
             const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'], FIRST_NAMES = ['Arda', 'Kerem', 'Ferdi', 'Uğurcan', 'Hakan', 'Barış', 'Kenan', 'Orkun', 'Merih', 'Salih'], LAST_NAMES = ['Güler', 'Aktürkoğlu', 'Kadıoğlu', 'Çakır', 'Çalhanoğlu', 'Yılmaz', 'Yıldız', 'Kökçü', 'Demiral', 'Özcan'];
-            
-            const coinBalanceEl = document.getElementById('coin-balance'), menuButtons = document.querySelectorAll('.menu-btn'), gameViews = document.querySelectorAll('.game-view'), currencyDisplay = document.getElementById('currency-display'), backToMenuBtn = document.getElementById('back-to-menu'), openPackBtn = document.getElementById('open-pack-btn'), packResultsEl = document.getElementById('pack-results'), messageBoxEl = document.getElementById('message-box');
             let threeJsState = { isInitialized: false };
-
-            // Genel Fonksiyonlar
-            const updateCoinDisplay = () => { coinBalanceEl.textContent = gameState.coins; };
-
-            const showMessage = (message, duration = 3000) => {
-                messageBoxEl.textContent = message;
-                messageBoxEl.classList.add('show');
-                setTimeout(() => { messageBoxEl.classList.remove('show'); }, duration);
+            const i18n = { // Dil verileri
+                tr: { main_title: "FUTBOL KRALLIĞI" },
+                en: { main_title: "FOOTBALL KINGDOM" }
             };
+
+            //--- ELEMENT REFERANSLARI ---
+            const bodyEl = document.body;
+            const coinBalanceEl = document.getElementById('coin-balance');
+            const menuButtons = document.querySelectorAll('.menu-btn');
+            const gameViews = document.querySelectorAll('.game-view');
+            const currencyDisplay = document.getElementById('currency-display');
+            const backToMenuBtn = document.getElementById('back-to-menu');
+            const openPackBtn = document.getElementById('open-pack-btn');
+            const packResultsEl = document.getElementById('pack-results');
+            const squadPlayerListEl = document.getElementById('squad-player-list');
+            const devPlayerListEl = document.getElementById('dev-player-list');
+            const mainTitleEl = document.getElementById('main-title');
+            const themeOptionsEl = document.getElementById('theme-options');
+            const langOptionsEl = document.getElementById('lang-options');
+
+            //--- YENİ: AYARLAR FONKSİYONLARI ---
+            function applyTheme(themeName) {
+                bodyEl.dataset.theme = themeName;
+                localStorage.setItem('game_theme', themeName);
+                // Ayarlar menüsündeki butonların aktif durumunu güncelle
+                themeOptionsEl.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.theme === themeName);
+                });
+            }
+
+            function applyLanguage(langCode) {
+                mainTitleEl.textContent = i18n[langCode].main_title;
+                localStorage.setItem('game_lang', langCode);
+                // Ayarlar menüsündeki butonların aktif durumunu güncelle
+                langOptionsEl.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.lang === langCode);
+                });
+            }
+
+            function loadSettings() {
+                const savedTheme = localStorage.getItem('game_theme') || 'dark';
+                const savedLang = localStorage.getItem('game_lang') || 'tr';
+                applyTheme(savedTheme);
+                applyLanguage(savedLang);
+            }
+
+            //--- YENİ: OYUNCU LİSTESİNİ GÖSTERME FONKSİYONU ---
+            function renderRosterList(targetElement) {
+                targetElement.innerHTML = ''; // Listeyi temizle
+                if (gameState.roster.length === 0) {
+                    targetElement.innerHTML = '<li>Hiç oyuncun yok. Paket açarak oyuncu kazan!</li>';
+                    return;
+                }
+                gameState.roster.forEach(player => {
+                    const playerEl = document.createElement('li');
+                    playerEl.className = 'player-item';
+                    playerEl.innerHTML = `
+                        <div class="player-info">
+                            <strong>${player.name}</strong> (${player.pos})
+                        </div>
+                        <div class="player-ovr">${player.ovr}</div>
+                    `;
+                    targetElement.appendChild(playerEl);
+                });
+            }
+
+            //--- GENEL FONKSİYONLAR ---
+            const updateCoinDisplay = () => { coinBalanceEl.textContent = gameState.coins; };
 
             const switchView = (viewId) => {
                 gameViews.forEach(view => view.classList.remove('active'));
@@ -255,31 +230,35 @@
                 currencyDisplay.style.display = isMenu ? 'none' : 'block';
                 backToMenuBtn.style.display = isMenu ? 'none' : 'block';
                 
-                if(viewId === 'match-view-3d' && !threeJsState.isInitialized) initThreeJS();
+                // Gerekli ekranlara girildiğinde oyuncu listelerini güncelle
+                if (viewId === 'squad-view') renderRosterList(squadPlayerListEl);
+                if (viewId === 'dev-view') renderRosterList(devPlayerListEl);
+                if (viewId === 'match-view-3d' && !threeJsState.isInitialized) initThreeJS();
             };
-
-            // Paket ve Oyuncu Fonksiyonları
+            
+            //--- PAKET SİSTEMİ (GÜNCELLENDİ) ---
             const createRandomPlayer = () => ({ id: nextPlayerId++, name: `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`, pos: POSITIONS[Math.floor(Math.random() * POSITIONS.length)], ovr: Math.floor(Math.random() * 40) + 55 });
 
             const openPack = () => {
-                if (gameState.coins < 150) { showMessage('Yeterli coinin yok!'); return; }
-                gameState.coins -= 150;
+                const packCost = 50;
+                if (gameState.coins < packCost) { alert('Yeterli coinin yok!'); return; }
+                gameState.coins -= packCost;
                 updateCoinDisplay();
                 packResultsEl.innerHTML = ''; 
-                for (let i = 0; i < 5; i++) {
-                    const newPlayer = createRandomPlayer();
-                    gameState.roster.push(newPlayer);
-                    const card = document.createElement('div');
-                    card.className = 'player-card';
-                    card.style.animationDelay = `${i * 100}ms`;
-                    card.innerHTML = `<div class="ovr">${newPlayer.ovr}</div><div class="name">${newPlayer.name}</div><div class="pos">${newPlayer.pos}</div>`;
-                    packResultsEl.appendChild(card);
-                }
+                
+                // Sadece 1 oyuncu oluştur
+                const newPlayer = createRandomPlayer();
+                gameState.roster.push(newPlayer);
+                
+                const card = document.createElement('div');
+                card.className = 'player-card'; // CSS'te zaten tanımlı
+                card.innerHTML = `<div class="ovr">${newPlayer.ovr}</div><div class="name">${newPlayer.name}</div><div class="pos">${newPlayer.pos}</div>`;
+                packResultsEl.appendChild(card);
             };
 
-            // Three.js 3D Sahne Fonksiyonu
+            //--- 3D SAHNE (GÜNCELLENDİ) ---
             const initThreeJS = () => {
-                const canvas = document.getElementById('threejs-canvas'), infoBox = document.getElementById('info-box-3d');
+                const canvas = document.getElementById('threejs-canvas');
                 if(!canvas) return;
                 threeJsState.isInitialized = true;
                 
@@ -305,8 +284,7 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 const controls = new THREE.OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
-                if(infoBox) infoBox.style.display = 'none';
-
+                
                 const animate = () => {
                     requestAnimationFrame(animate);
                     controls.update();
@@ -321,10 +299,19 @@
                 });
             };
 
-            // Olay Dinleyicileri ve Başlatma
+            //--- OLAY DİNLEYİCİLERİ VE BAŞLATMA ---
             menuButtons.forEach(button => button.addEventListener('click', () => switchView(button.dataset.view)));
             backToMenuBtn.addEventListener('click', () => switchView('menu-view'));
             openPackBtn.addEventListener('click', openPack);
+            themeOptionsEl.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') applyTheme(e.target.dataset.theme);
+            });
+            langOptionsEl.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON') applyLanguage(e.target.dataset.lang);
+            });
+
+            // Oyunu başlat
+            loadSettings();
             updateCoinDisplay();
             switchView('menu-view');
         });
